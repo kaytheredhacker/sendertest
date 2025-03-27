@@ -189,6 +189,9 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    background: #2d2d2d;
+    padding: 20px;
+    border-radius: 6px;
 }
 
 .config-item {
@@ -369,12 +372,6 @@
     color: white;
 }
 
-.configs-list {
-    background: #2d2d2d;
-    padding: 20px;
-    border-radius: 6px;
-}
-
 .configs-list h4 {
     color: #ffffff;
     margin-bottom: 15px;
@@ -419,4 +416,47 @@
 
 .reset-btn:hover {
     background: #c0392b;
-} 
+}
+
+form {
+    max-width: 400px; /* Limit the form width */
+    margin: 0 auto; /* Center the form */
+    padding: 15px; /* Reduce padding */
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+form div {
+    margin-bottom: 10px; /* Reduce spacing between fields */
+}
+
+form label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 14px; /* Smaller font size */
+}
+
+form input {
+    width: 100%;
+    padding: 6px; /* Reduce padding */
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    padding: 8px 12px; /* Reduce button size */
+    font-size: 14px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+}
+
+button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}

@@ -11,6 +11,7 @@ import { Buffer } from 'buffer';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
+import { replacePlaceholders } from './utils/placeholderUtils.js';
 
 // Load environment variables from .env file
 const __filename = fileURLToPath(import.meta.url);
@@ -493,7 +494,7 @@ app.post('/api/send-emails', async (req, res) => {
             const currentTemplate = validTemplates[templateIndex];
             
             // Replace variables in template
-            const processedTemplate = replaceTemplateVariables(currentTemplate, recipient);
+            const processedTemplate = replacePlaceholders(currentTemplate, recipient);
 
             try {
                 // Add delay between emails

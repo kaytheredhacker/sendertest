@@ -8,7 +8,9 @@ const SMTPSetup = () => {
     isConfigured,
     isLoading,
     saveSmtpConfig,
-    checkExistingConfig
+    checkExistingConfig,
+    deleteTemplate,
+    templates
   } = SMTPHandler();
 
   const [showForm, setShowForm] = useState(!isConfigured);
@@ -19,6 +21,7 @@ const SMTPSetup = () => {
     password: ''
   });
   const [error, setError] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   useEffect(() => {
     checkExistingConfig();
@@ -43,40 +46,66 @@ const SMTPSetup = () => {
     e.preventDefault();
     setError('');
 
+    // Validate required fields
     if (!formData.host?.trim()) {
-      setError('Host is required');
-      return;
+        setError('Host is required');
+        return;
     }
     if (!formData.port?.toString().trim()) {
-      setError('Port is required');
-      return;
+        setError('Port is required');
+        return;
     }
     if (!formData.username?.trim()) {
-      setError('Username is required');
-      return;
+        setError('Username is required');
+        return;
     }
     if (!formData.password?.trim()) {
-      setError('Password is required');
-      return;
+        setError('Password is required');
+        return;
     }
 
+    // Validate port number
     const portNumber = parseInt(formData.port, 10);
     if (isNaN(portNumber) || portNumber < 1 || portNumber > 65535) {
-      setError('Invalid port number');
-      return;
+        setError('Invalid port number');
+        return;
     }
 
     try {
-      const configToSave = {
-        ...formData,
-        port: portNumber
-      };
-      await saveSmtpConfig(configToSave);
-      setShowForm(false);
+        // Save the configuration
+        const configToSave = {
+            ...formData,
+            port: portNumber
+        };
+        await saveSmtpConfig(configToSave);
+
+        // Close the form after saving
+        setShowForm(false);
     } catch (error) {
-      setError(error.message || 'Failed to save SMTP config');
-      console.error('Failed to save SMTP config:', error);
+        // Handle errors during save
+        setError(error.message || 'Failed to save SMTP config');
+        console.error('Failed to save SMTP config:', error);
     }
+  };
+
+  const handleDeleteTemplate = async (templateId) => {
+    try {
+        await deleteTemplate(templateId); // Call the delete function
+        alert('Template deleted successfully');
+        checkExistingConfig(); // Refresh the template list
+    } catch (error) {
+        console.error('Failed to delete template:', error);
+        setError('Failed to delete template');
+    }
+  };
+
+  const previewTemplate = (template, placeholders) => {
+    let preview = template;
+    Object.keys(placeholders).forEach((key) => {
+        const regex = new RegExp(`{{${key}}}`, 'g');
+        preview = preview.replace(regex, placeholders[key]);
+    });
+    return preview;
   };
 
   if (isLoading) return <div>Loading...</div>;
@@ -93,6 +122,34 @@ const SMTPSetup = () => {
         >
           Edit Configuration
         </button>
+        <div>
+          <h2>Templates</h2>
+          {templates.map((template) => (
+              <div key={template.id} className="template-item">
+                  <p>{template.name}</p>
+                  <button
+                      onClick={() => handleDeleteTemplate(template.id)}
+                      className="delete-template-btn"
+                  >
+                      Delete
+                  </button>
+                  <button
+                      onClick={() => setSelectedTemplate(template)}
+                      className="preview-template-btn"
+                  >
+                      Preview
+                  </button>
+              </div>
+          ))}
+        </div>
+        {selectedTemplate && (
+          <div>
+            <h2>Template Preview</h2>
+            <div className="template-preview">
+                {previewTemplate(selectedTemplate.content, { name: 'John Doe', email: 'john@example.com' })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -100,11 +157,7 @@ const SMTPSetup = () => {
   return (
     <div>
       <h2>SMTP Configuration</h2>
-      {error && (
-        <div className="alert error">
-          {error}
-        </div>
-      )}
+      {error && <div className="error-message">{error}</div>}
       <form onSubmit={handleSubmit}>
         <div>
           <label>Host:</label>

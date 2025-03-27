@@ -5,6 +5,8 @@ const isDev = process.env.NODE_ENV === 'development';
 let mainWindow;
 
 function createWindow() {
+    const iconPath = path.resolve(__dirname, 'assets', 'icon.ico');
+
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
@@ -12,7 +14,7 @@ function createWindow() {
             nodeIntegration: true,
             contextIsolation: false
         },
-        icon: path.join(__dirname, 'assets', 'icon.ico')
+        icon: iconPath
     });
 
     // Load the app
@@ -47,21 +49,31 @@ app.on('activate', () => {
 
 // Handle file dialogs
 ipcMain.handle('select-file', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        properties: ['openFile'],
-        filters: [
-            { name: 'Text Files', extensions: ['txt', 'csv'] },
-            { name: 'All Files', extensions: ['*'] }
-        ]
-    });
-    return result.filePaths;
+    try {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openFile'],
+            filters: [
+                { name: 'Text Files', extensions: ['txt', 'csv'] },
+                { name: 'All Files', extensions: ['*'] }
+            ]
+        });
+        return result.filePaths;
+    } catch (error) {
+        console.error('Error selecting file:', error);
+        return [];
+    }
 });
 
 ipcMain.handle('select-directory', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-        properties: ['openDirectory']
-    });
-    return result.filePaths;
+    try {
+        const result = await dialog.showOpenDialog(mainWindow, {
+            properties: ['openDirectory']
+        });
+        return result.filePaths;
+    } catch (error) {
+        console.error('Error selecting directory:', error);
+        return [];
+    }
 });
 
 // Handle app updates
@@ -115,4 +127,4 @@ app.whenReady().then(createTray);
 app.setLoginItemSettings({
     openAtLogin: true,
     path: app.getPath('exe')
-}); 
+});

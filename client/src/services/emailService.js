@@ -30,35 +30,42 @@ class EmailService {
         this.successCount = 0;
         this.failureCount = 0;
 
+        const rotationState = {
+            smtpIndex: 0,
+            templateIndex: 0,
+            nameIndex: 0,
+            subjectIndex: 0
+        };
+
         try {
             for (let i = 0; i < recipients.length; i++) {
                 const recipient = recipients[i];
 
                 // Rotate SMTP config every 100 emails
                 if (this.emailCount % 100 === 0) {
-                    this.smtpConfigIndex = (this.smtpConfigIndex + 1) % smtpConfigs.length;
+                    rotationState.smtpIndex = (rotationState.smtpIndex + 1) % smtpConfigs.length;
                     onProgress({
                         status: 'sending',
-                        message: `Rotating SMTP configuration (${this.smtpConfigIndex + 1}/${smtpConfigs.length})`
+                        message: `Rotating SMTP configuration (${rotationState.smtpIndex + 1}/${smtpConfigs.length})`
                     });
                 }
 
                 // Rotate template every 50 emails
                 if (this.emailCount % 50 === 0) {
-                    this.templateIndex = (this.templateIndex + 1) % templates.length;
+                    rotationState.templateIndex = (rotationState.templateIndex + 1) % templates.length;
                     onProgress({
                         status: 'sending',
-                        message: `Rotating email template (${this.templateIndex + 1}/${templates.length})`
+                        message: `Rotating email template (${rotationState.templateIndex + 1}/${templates.length})`
                     });
                 }
 
                 // Rotate name and subject every 2 successful emails
                 if (this.successCount % 2 === 0) {
-                    this.nameIndex = (this.nameIndex + 1) % names.length;
-                    this.subjectIndex = (this.subjectIndex + 1) % subjects.length;
+                    rotationState.nameIndex = (rotationState.nameIndex + 1) % names.length;
+                    rotationState.subjectIndex = (rotationState.subjectIndex + 1) % subjects.length;
                     onProgress({
                         status: 'sending',
-                        message: `Rotating name and subject (${this.nameIndex + 1}/${names.length})`
+                        message: `Rotating name and subject (${rotationState.nameIndex + 1}/${names.length})`
                     });
                 }
 
@@ -73,10 +80,10 @@ class EmailService {
                 try {
                     const result = await this.sendSingleEmail({
                         recipient,
-                        name: names[this.nameIndex],
-                        subject: subjects[this.subjectIndex],
-                        template: templates[this.templateIndex],
-                        smtpConfig: smtpConfigs[this.smtpConfigIndex]
+                        name: names[rotationState.nameIndex],
+                        subject: subjects[rotationState.subjectIndex],
+                        template: templates[rotationState.templateIndex],
+                        smtpConfig: smtpConfigs[rotationState.smtpIndex]
                     });
 
                     this.successCount++;
@@ -84,7 +91,7 @@ class EmailService {
                     
                     onProgress({
                         status: 'sending',
-                        message: `Sent ${this.successCount} of ${recipients.length} emails (Template: ${this.templateIndex + 1}, SMTP: ${this.smtpConfigIndex + 1})`,
+                        message: `Sent ${this.successCount} of ${recipients.length} emails (Template: ${rotationState.templateIndex + 1}, SMTP: ${rotationState.smtpIndex + 1})`,
                         current: this.successCount,
                         total: recipients.length
                     });
@@ -94,13 +101,13 @@ class EmailService {
                     this.emailCount++;
                     
                     // Try alternative SMTP config on failure
-                    this.smtpConfigIndex = (this.smtpConfigIndex + 1) % smtpConfigs.length;
+                    rotationState.smtpIndex = (rotationState.smtpIndex + 1) % smtpConfigs.length;
                     
                     onError({
                         recipient,
                         error: error.message,
-                        currentTemplate: this.templateIndex + 1,
-                        currentSMTP: this.smtpConfigIndex + 1
+                        currentTemplate: rotationState.templateIndex + 1,
+                        currentSMTP: rotationState.smtpIndex + 1
                     });
                 }
             }
@@ -111,8 +118,8 @@ class EmailService {
                     successful: this.successCount,
                     failed: this.failureCount,
                     total: this.emailCount,
-                    templatesUsed: this.templateIndex + 1,
-                    smtpConfigsUsed: this.smtpConfigIndex + 1
+                    templatesUsed: rotationState.templateIndex + 1,
+                    smtpConfigsUsed: rotationState.smtpIndex + 1
                 }
             };
 
@@ -149,4 +156,4 @@ class EmailService {
     }
 }
 
-export const emailService = new EmailService(); 
+export const emailService = new EmailService();

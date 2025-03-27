@@ -76,10 +76,13 @@ export async function sendEmailsToList({ onProgress, onComplete, onError }) {
         const names = (await readFile(path.join(__dirname, 'name.txt')))?.split('\n').filter(Boolean) || [];
         const subjects = (await readFile(path.join(__dirname, 'subject.txt')))?.split('\n').filter(Boolean) || [];
         
-    let currentSmtpIndex = 0;
-    let nameIndex = 0;
-    let subjectIndex = 0;
-    let emailsSent = 0;
+        if (!smtpConfigs.length) throw new Error('No SMTP configurations available');
+        if (!templates.length) throw new Error('No templates available');
+
+        let currentSmtpIndex = 0;
+        let nameIndex = 0;
+        let subjectIndex = 0;
+        let emailsSent = 0;
         let failedEmails = 0;
 
         for (const recipient of recipients) {
@@ -119,9 +122,9 @@ export async function sendEmailsToList({ onProgress, onComplete, onError }) {
                 
                 // Rotate name and subject every 2 emails
                 if (emailsSent % 2 === 0) {
-        nameIndex = (nameIndex + 1) % names.length;
-        subjectIndex = (subjectIndex + 1) % subjects.length;
-      }
+                    nameIndex = (nameIndex + 1) % names.length;
+                    subjectIndex = (subjectIndex + 1) % subjects.length;
+                }
       
                 // Report progress
                 onProgress({
