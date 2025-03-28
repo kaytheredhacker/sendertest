@@ -1,0 +1,20 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 7
+    },
+    "auditLog": "/workspaces/sendertest/server/senderexe/logs/.0a1de7eb6ce70f9c775ebe975ca9ee8eacb8d2ec-audit.json",
+    "files": [
+        {
+            "date": 1743073481570,
+            "name": "/workspaces/sendertest/server/senderexe/logs/error-2025-03-27.log",
+            "hash": "be0dd56faab7833b84ed07c5b53fed06f592ab258aad0ed625b63261e9e45fbe"
+        },
+        {
+            "date": 1743165661144,
+            "name": "/workspaces/sendertest/server/senderexe/logs/error-2025-03-28.log",
+            "hash": "f9ca459ea84d696ec6805628383c0360a68602f4795acccb8af6b44b6cc55731"
+        }
+    ],
+    "hashType": "sha256"
+}

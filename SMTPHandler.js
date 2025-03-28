@@ -1,5 +1,7 @@
 // SMTPHandler.js
 import { useState } from 'react';
+import { validateRotationRequirements } from '../utils/validationUtils';
+import { encrypt, decrypt } from '../utils/encryptionUtils';
 
 const MAX_SMTP_CONFIGS = 10;
 const MAX_TEMPLATES = 10;
@@ -86,5 +88,23 @@ const SMTPHandler = () => {
     checkExistingConfig
   };
 };
+
+// Example usage
+const smtpConfigs = [
+    { host: 'smtp.example.com', port: 587, username: 'user', password: 'pass' }
+];
+
+try {
+    validateRotationRequirements(smtpConfigs, [], [], []);
+    console.log('Validation passed');
+} catch (error) {
+    console.error(error.message);
+}
+
+const encryptedPassword = encrypt('password123');
+console.log('Encrypted Password:', encryptedPassword);
+
+const decryptedPassword = decrypt(encryptedPassword);
+console.log('Decrypted Password:', decryptedPassword);
 
 export default SMTPHandler;

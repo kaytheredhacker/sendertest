@@ -5,10 +5,8 @@ if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
     throw new Error('ENCRYPTION_KEY must be set in .env and must be 32 characters long');
 }
 
-const IV_LENGTH = 16;
-
 const encrypt = (text) => {
-    const iv = crypto.randomBytes(IV_LENGTH);
+    const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
     let encrypted = cipher.update(text);
     encrypted = Buffer.concat([encrypted, cipher.final()]);

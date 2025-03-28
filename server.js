@@ -1,12 +1,52 @@
+require('dotenv').config(); // Load environment variables from .env
+const jwt = require('jsonwebtoken');
+const { encrypt, decrypt } = require('./utils/encryptionUtils');
+const { validateRotationRequirements, validateSmtpConfig } = require('./utils/validationUtils');
+const { errorHandler } = require('./utils/errorUtils');
+
+// Example usage of imported utilities
+const smtpConfigs = []; // Example SMTP configurations
+try {
+    validateRotationRequirements(smtpConfigs, [], [], []);
+} catch (error) {
+    console.error(error.message);
+}
+
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 32) {
+    throw new Error('ENCRYPTION_KEY must be set in .env and must be 32 characters long');
+}
+
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET must be set in .env');
+}
+
+// JWT Authentication Middleware
+const authenticate = (req, res, next) => {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(403).json({ success: false, message: 'Invalid or expired token' });
+    }
+};
+
 const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
-const { encrypt, decrypt } = require('./utils/encryption');
 const randomstring = require('randomstring'); // Ensure this is installed: npm install randomstring
-const { replacePlaceholders } = require('./utils/placeholderUtils');
+import { replacePlaceholders } from '../utils/placeholderUtils.js';
 
 // Centralized Configuration
 const CONFIG_PATH = path.join(__dirname, 'smtp-config.json');
@@ -79,13 +119,6 @@ const validate = {
             errors
         };
     }
-};
-
-const validateRotationRequirements = (smtpConfigs, templates, names, subjects) => {
-    if (!smtpConfigs.length) throw new Error('At least one SMTP configuration is required');
-    if (!templates.length) throw new Error('At least one email template is required');
-    if (!names.length) throw new Error('At least one sender name is required');
-    if (!subjects.length) throw new Error('At least one email subject is required');
 };
 
 // SMTP Connection Utility
@@ -272,6 +305,7 @@ app.post('/api/send-email', async (req, res) => {
             );
 
             const personalizedTemplate = replacePlaceholders(template, email);
+
 
             const transporter = nodemailer.createTransport({
                 host: smtpConfig.host,

@@ -11,7 +11,9 @@ import { Buffer } from 'buffer';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
-import { replacePlaceholders } from './utils/placeholderUtils.js';
+import { replacePlaceholders } from '../utils/placeholderUtils.js';
+import { validateRotationRequirements, validateSmtpConfig } from './utils/validationUtils';
+import { errorHandler } from './utils/errorUtils';
 
 // Load environment variables from .env file
 const __filename = fileURLToPath(import.meta.url);
@@ -58,10 +60,11 @@ const errorHandler = (err, req, res, next) => {
 
 const app = express();
 app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS.split(','),
+    origin: '*',
     methods: ['GET', 'POST'],
     credentials: true
 }));
+
 app.use(express.json());
 
 // API Documentation
@@ -336,33 +339,11 @@ const delay = (minMs, maxMs) => new Promise((resolve, reject) => {
 
 // Store cancellable operations
 const cancellableOperations = new Map();
+const content = templates[0]; // templates
 
-// Function to replace variables in template with limits
-function replaceTemplateVariables(content, email) {
-    const [emailUsername, domain] = email.split('@');
-    const domainName = domain?.split('.')[0] || 'Unknown';
-    const toBase64 = (str) => Buffer.from(str).toString('base64');
-    const randomDate = new Date(Date.now() - Math.random() * 10000000000).toISOString();
-    
-    return content
-        .replace(/GIRLUSER/g, emailUsername)
-        .replace(/GIRLDOMC/g, domainName.charAt(0).toUpperCase() + domainName.slice(1))
-        .replace(/GIRLdomain/g, domainName)
-        .replace(/GIRLDOMAIN/g, domain)
-        .replace(/TECHGIRLEMAIL/g, email)
-        .replace(/TECHGIRLEMAIL64/g, toBase64(email))
-        .replace(/TECHGIRLRND/g, randomstring.generate({ 
-            length: Math.min(5, 10),
-            charset: 'alphabetic' 
-        }))
-        .replace(/TECHGIRLRNDLONG/g, randomstring.generate({ 
-            length: Math.min(50, 100),
-            charset: 'alphabetic' 
-        }))
-        .replace(/TECHGIRLDATE/g, randomDate)
-        .replace(/TECHGIRLIP/g, `${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}.${Math.floor(Math.random() * 256)}`)
-        .replace(/TECHGIRLUA/g, ['Mozilla/5.0', 'Chrome/91.0.4472.124', 'Safari/605.1.15', 'Edge/91.0.864.59'][Math.floor(Math.random() * 4)]);
-}
+
+const replaceTemplateVariables = replacePlaceholders(content, email);
+
 
 // Cleanup function for failed operations
 const cleanupFailedOperation = async (operationId) => {
@@ -491,7 +472,7 @@ app.post('/api/send-emails', async (req, res) => {
 
             // Get current template based on email count
             const templateIndex = Math.floor(emailsSuccessful / 50) % validTemplates.length;
-            const currentTemplate = validTemplates[templateIndex];
+            const currentTemplate = validTemplates[templateIndex];   
             
             // Replace variables in template
             const processedTemplate = replacePlaceholders(currentTemplate, recipient);
@@ -536,6 +517,61 @@ app.post('/api/send-emails', async (req, res) => {
         });
     } finally {
         cancellableOperations.delete(operationId);
+    }
+});
+
+// Send email with rotation
+app.post('/api/send-email', async (req, res) => {
+    const { smtpConfigs, templates, names, subjects, emails } = req.body;
+
+    try {
+        validateRotationRequirements(smtpConfigs, templates, names, subjects);
+
+        let emailsSent = 0;
+
+        for (const email of emails) {
+            const { smtpConfig, template, name, subject } = rotate(
+                smtpConfigs,
+                templates,
+                names,
+                subjects,
+                emailsSent
+            );
+
+            // Restore `content` as the current email template
+            const content = template; // Use the current template from rotation
+
+            // Replace placeholders in the template
+            const personalizedContent = replacePlaceholders(content, email);
+
+            const transporter = nodemailer.createTransport({
+                host: smtpConfig.host,
+                port: smtpConfig.port,
+                secure: smtpConfig.secure,
+                auth: {
+                    user: smtpConfig.username,
+                    pass: smtpConfig.password
+                }
+            });
+
+            const mailOptions = {
+                from: `"${name}" <${smtpConfig.username}>`,
+                to: email,
+                subject: subject,
+                html: personalizedContent
+            };
+
+            await transporter.sendMail(mailOptions);
+            emailsSent++;
+
+            const delay = Math.floor(Math.random() * 9000) + 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        res.json({ success: true, message: `${emailsSent} emails sent successfully` });
+    } catch (error) {
+        console.error(`Error sending emails: ${error.message}`);
+        res.status(500).json({ success: false, message: error.message });
     }
 });
 
